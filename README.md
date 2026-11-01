@@ -60,7 +60,7 @@ Measured with `python3 benchmarks/run.py` (tiktoken 0.14.0). All inputs are in [
 |---|---|---|---|---|
 | 3-turn architecture session (`architecture_session.md`) | `pack` (automatic) | 1,879 | 1,435 | 23.6% |
 | 3-turn architecture session (`architecture_session.md`) | hand-written (`architecture_session.ail`) | 1,879 | 385 | 79.5% |
-| Python source (`ail_mcp.py`, signatures only) | `pack` (automatic) | 5,043 | 666 | 86.8% |
+| Python source (`ail_mcp.py`, signatures only) | `pack` (automatic) | 5,895 | 757 | 87.2% |
 | One-paragraph example (`quick_example.txt`) | `pack` (automatic) | 85 | 98 | -15.3% |
 | One-paragraph example (`quick_example.txt`) | hand-written (`quick_example.ail`) | 85 | 87 | -2.4% |
 

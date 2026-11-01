@@ -2,7 +2,8 @@
 """Reproduce the README token benchmarks (tiktoken cl100k_base).
 
     pip install tiktoken
-    python3 benchmarks/run.py
+    python3 benchmarks/run.py                  # print the table
+    python3 benchmarks/run.py --write-readme   # also replace the table rows in README.md
 
 Rows:
 - "pack" rows run the automatic encoder (`ail_mcp.pack`) on the raw input.
@@ -55,11 +56,24 @@ def table_rows() -> list[str]:
     ]
 
 
+HEADER = "| Workload | Snapshot | Raw tokens | AILv1 tokens | Reduction |\n|---|---|---|---|---|\n"
+
+
+def write_readme(rows: list[str]) -> None:
+    readme = ROOT / "README.md"
+    text = readme.read_text(encoding="utf-8")
+    start = text.index(HEADER) + len(HEADER)
+    end = text.index("\n\n", start)
+    readme.write_text(text[:start] + "\n".join(rows) + text[end:], encoding="utf-8")
+
+
 def main() -> None:
+    rows = table_rows()
     print(f"tiktoken {tiktoken.__version__}, cl100k_base\n")
-    print("| Workload | Snapshot | Raw tokens | AILv1 tokens | Reduction |")
-    print("|---|---|---|---|---|")
-    print("\n".join(table_rows()))
+    print(HEADER + "\n".join(rows))
+    if "--write-readme" in sys.argv[1:]:
+        write_readme(rows)
+        print("\nREADME.md updated")
 
 
 if __name__ == "__main__":
