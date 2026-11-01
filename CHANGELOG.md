@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here. Versions follow semantic versioning.
 
-## v1.0.0 (unreleased)
+## v1.0.0 (2026-11-01)
 
 The first release. It packages the skill as a zip you can unzip straight into a project.
 
