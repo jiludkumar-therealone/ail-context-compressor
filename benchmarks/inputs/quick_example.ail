@@ -1,0 +1,5 @@
+!AILv1
+@MEM $1=NetScanner_App $2=FastAPI_Py $3=Docker_Ubuntu $4=Subnets $5=SQLite_DB
+@CTX $1[$2,$3]->scan($4:IPCam,Switch)
+@LOG !sync_ping(timeout_large_$4) -> ^async_ARP_Scapy
+@NEXT ?fix($5:concurrent_write_lock)

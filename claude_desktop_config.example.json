@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ail-context-compressor": {
+      "command": "python3",
+      "args": ["/absolute/path/to/ail-context-compressor/skills/ail-context-compressor/scripts/ail_mcp.py", "mcp"]
+    }
+  }
+}
