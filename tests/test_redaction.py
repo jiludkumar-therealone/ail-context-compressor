@@ -14,6 +14,8 @@ FAKES = {
     "GOOGLE_KEY": ["AIza" + ALNUM[:35]],
     "JWT": ["eyJ" + ALNUM[:12] + "." + ALNUM[:16] + "." + ALNUM[:16]],
     "EMAIL": ["jane.doe@example.com", "ops+alerts@test.example.org"],
+    "IPV6": ["2001:db8::1", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", "fe80::1ff:fe23:4567:890a",
+             "fd12:3456:789a:1::42", "::ffff:192.0.2.128", "2001:db8:0:1:1:1:1:1"],
     "IPV4": ["10.20.30.40", "10.0.0.1", "100.64.0.1", "100.127.255.254", "192.0.2.10", "203.0.113.77"],
 }
 KEY_BODY = "MIIEpAIBAAKCAQEA" + ALNUM * 3
@@ -37,6 +39,51 @@ class RedactionTests(unittest.TestCase):
                 self.assertNotIn(value, out, kind)
                 self.assertIn(f"[REDACTED_{kind}]", out, value)
                 self.assertEqual(counts, {kind: 1}, value)
+
+    def test_ipv6_in_context(self):
+        for text in ["bind [2001:db8::1]:8080 now", "peer fe80::1ff:fe23:4567:890a%eth0 up",
+                     "addr 2001:db8::1.", "(fd12:3456:789a:1::42)"]:
+            out, counts = ail_mcp.redact(text)
+            self.assertIn("[REDACTED_IPV6]", out, text)
+            self.assertNotIn("2001:db8", out)
+            self.assertNotIn("fe23", out)
+            self.assertNotIn("789a", out)
+
+    def test_key_value_secrets(self):
+        pw = "Fake" + "Pass" + "word" + "123"
+        cases = [
+            f"password={pw}", f"PASSWORD = {pw}", f"db_password: {pw}", f"passwd={pw}",
+            f'"password": "{pw}"', f"'secret': '{pw}'", f'client_secret: "{pw}"', f"api_key={pw}",
+            f"API-KEY: {pw}", f"apikey = '{pw}'", f'"access_token":"{pw}"', f"auth_token={pw};",
+            f"export DB_PASSWORD={pw}", f'password: str = "{pw}"', f"user.password={pw}&next=1",
+        ]
+        for text in cases:
+            out, counts = ail_mcp.redact(text)
+            self.assertNotIn(pw, out, text)
+            self.assertIn("[REDACTED_SECRET]", out, text)
+        out, _ = ail_mcp.redact(f'{{"user": "demo", "password": "{pw}"}}')
+        self.assertEqual(out, '{"user": "demo", "password": "[REDACTED_SECRET]"}')
+
+    def test_key_value_secret_in_python_default_is_not_in_sig(self):
+        pw = "Fake" + "Pw" + "42"
+        code = f'def login(user: str, password: str = "{pw}") -> bool:\n    return True\n'
+        sigs = "\n".join(ail_mcp.extract_signatures(code))
+        self.assertNotIn(pw, sigs)
+        self.assertIn("login(", sigs)
+
+    def test_benign_text_is_untouched(self):
+        benign = [
+            "x = items[::2]", "std::vector<int> v; Foo::bar()", "a[1::3] and b[10::20]",
+            "sha256 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "commit 769608085603d4bf9a46a684e5e13d826b5f4e75", "meet at 12:30:45 today",
+            "mac aa:bb:cc:dd:ee:ff", "def login(password: str, secret: bytes = None) -> bool:",
+            "password = getpass.getpass()", "secret = os.environ['APP_SECRET']",
+            "password: Optional[str] = None", "the password field is required", "secretary=Bob",
+            "passwords: list[str]", "if password == expected:",
+        ]
+        for text in benign:
+            out, counts = ail_mcp.redact(text)
+            self.assertEqual(out, text, f"false positive: {text!r} -> {out!r}")
 
     def test_private_key_blocks(self):
         for block in (PRIVATE_KEY, OPENSSH_KEY, PRIVATE_KEY.split("-----END")[0]):

@@ -50,7 +50,7 @@ identifier   = ( LETTER | DIGIT | "_" | "." | "/" | ":" | "-" )+ ;
 - **Encoder (`pack`)**: redacts secrets first (on by default), turns a Python file into `@SIG` lines, turns fenced Python blocks in a chat log into `@SIG` lines plus a `[CodeBlock_N]` marker, keeps every other non-blank line as `@CTX`, and replaces recurring terms with `$N` pointers when that saves tokens. `@LOG` and `@NEXT` entries are passed in explicitly (`--log`, `--next`); the encoder does not guess which approaches were rejected.
 - **Decoder (`parse`, `hydrate`)**: validates the header and every section, resolves pointers in a single pass, leaves undefined `$N` untouched, and caps input and output size. Prose round-trips exactly (minus blank lines and surrounding whitespace).
 - **`@SIG` extractor**: Python `ast` only. Qualified names (`Class.method`, `outer.inner`), typed args, short defaults, `*args`/`**kwargs`, async (`~`), return type (annotated, or `Any`/`None` inferred), and up to five mutations (attribute/subscript assignment, `global`/`nonlocal`, calls such as `.append`, `.write_text`, `.commit`).
-- **Redaction**: GitHub tokens, `sk-` API keys, AWS key IDs, Slack and Google keys, JWTs, bearer tokens, private key blocks, emails, and all IPv4 addresses (including `10.0.0.0/8` and `100.64.0.0/10`). Full scope and limits in [SECURITY.md](SECURITY.md).
+- **Redaction**: GitHub tokens, `sk-` API keys, AWS key IDs, Slack and Google keys, JWTs, bearer tokens, private key blocks, `password=`/`secret:`/`"api_key": "..."` style credentials, emails, IPv6, and all IPv4 addresses (including `10.0.0.0/8` and `100.64.0.0/10`). Full scope and limits in [SECURITY.md](SECURITY.md).
 
 ## Benchmarks (`cl100k_base`)
 
@@ -60,7 +60,7 @@ Measured with `python3 benchmarks/run.py` (tiktoken 0.14.0). All inputs are in [
 |---|---|---|---|---|
 | 3-turn architecture session (`architecture_session.md`) | `pack` (automatic) | 1,879 | 1,435 | 23.6% |
 | 3-turn architecture session (`architecture_session.md`) | hand-written (`architecture_session.ail`) | 1,879 | 385 | 79.5% |
-| Python source (`ail_mcp.py`, signatures only) | `pack` (automatic) | 5,043 | 666 | 86.8% |
+| Python source (`ail_mcp.py`, signatures only) | `pack` (automatic) | 5,895 | 757 | 87.2% |
 | One-paragraph example (`quick_example.txt`) | `pack` (automatic) | 85 | 98 | -15.3% |
 | One-paragraph example (`quick_example.txt`) | hand-written (`quick_example.ail`) | 85 | 87 | -2.4% |
 
@@ -102,7 +102,7 @@ Or install the package from a checkout: `pip install .` gives you the `ail-mcp` 
 
 ### MCP server
 
-Tools: `ail_compress_text`, `ail_extract_code_sigs`, `ail_hydrate_state`, `ail_save_checkpoint` (writes `<name>.ail` in the working directory only, never overwrites). Works with `mcp` 1.x (`FastMCP`) and 2.x (`MCPServer`).
+Tools: `ail_compress_text`, `ail_extract_code_sigs`, `ail_hydrate_state`, `ail_save_checkpoint` (writes a new `<name>.ail` in the server's working directory only; no directory argument, never overwrites, never follows symlinks). Works with `mcp` 1.x (`FastMCP`) and 2.x (`MCPServer`).
 
 ```json
 {
