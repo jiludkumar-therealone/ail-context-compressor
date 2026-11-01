@@ -9,9 +9,10 @@ commit therefore produces the same SHA-256.
     python3 scripts/build_release.py            # writes dist/
     python3 scripts/build_release.py --out DIR  # writes DIR/
 
-The zip holds one folder, skills/ail-context-compressor/, so it can be
-unzipped straight into a project's agent folder (for example .claude/),
-leaving the skill at .claude/skills/ail-context-compressor/.
+The zip holds one top-level folder, ail-context-compressor/, with SKILL.md
+at its root. That is the layout skill marketplaces such as Agensi expect, and
+unzipping it into a skills folder (for example .claude/skills/) leaves the
+skill at .claude/skills/ail-context-compressor/.
 """
 import argparse
 import hashlib
@@ -21,19 +22,20 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = "skills/ail-context-compressor"
+SKILL = "skills/ail-context-compressor"  # source folder in the repository
+TOP = "ail-context-compressor"  # top-level folder inside the zip
 FIXED_TIME = (1980, 1, 1, 0, 0, 0)  # earliest time a zip entry can hold
 FILE_MODE = 0o100644
 
 # archive path -> source path, relative to the repository root.
 # Anything not listed here is not shipped (tests, caches, venvs, dotfiles).
 FILES = {
-    f"{SKILL}/SKILL.md": f"{SKILL}/SKILL.md",
-    f"{SKILL}/scripts/ail_mcp.py": f"{SKILL}/scripts/ail_mcp.py",
-    f"{SKILL}/mcp.example.json": f"{SKILL}/mcp.example.json",
-    f"{SKILL}/LICENSE": "LICENSE",
-    f"{SKILL}/README.md": "README.md",
-    f"{SKILL}/SECURITY.md": "SECURITY.md",
+    f"{TOP}/SKILL.md": f"{SKILL}/SKILL.md",
+    f"{TOP}/scripts/ail_mcp.py": f"{SKILL}/scripts/ail_mcp.py",
+    f"{TOP}/mcp.example.json": f"{SKILL}/mcp.example.json",
+    f"{TOP}/LICENSE": "LICENSE",
+    f"{TOP}/README.md": "README.md",
+    f"{TOP}/SECURITY.md": "SECURITY.md",
 }
 
 

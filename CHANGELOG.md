@@ -2,6 +2,13 @@
 
 All notable changes to this project are listed here. Versions follow semantic versioning.
 
+## v1.0.1 (unreleased)
+
+Packaging fix only. The skill files are unchanged.
+
+- The release zip now holds one top-level folder, `ail-context-compressor/`, with `SKILL.md` directly inside it. v1.0.0 nested it as `skills/ail-context-compressor/`, which skill marketplaces such as Agensi reject. Unzip into your skills folder (for example `.claude/skills/`) instead of its parent.
+- A test checks the zip has a single top-level folder with `SKILL.md` at its root.
+
 ## v1.0.0 (2026-11-01)
 
 The first release. It packages the skill as a zip you can unzip straight into a project.

@@ -76,26 +76,26 @@ An earlier version of this README claimed 94.8% (2,840 -> 148 tokens) for a sess
 
 ### Download the release (recommended)
 
-Each release on the [Releases page](https://github.com/jiludkumar-therealone/ail-context-compressor/releases/latest) has two files: `ail-context-compressor-v1.0.0.zip` and `ail-context-compressor-v1.0.0.zip.sha256`. The zip holds a single folder, `skills/ail-context-compressor/`, with `SKILL.md`, `scripts/ail_mcp.py`, `mcp.example.json`, this README, SECURITY.md and LICENSE.
+Each release on the [Releases page](https://github.com/jiludkumar-therealone/ail-context-compressor/releases/latest) has two files: `ail-context-compressor-v1.0.1.zip` and `ail-context-compressor-v1.0.1.zip.sha256`. The zip holds a single folder, `ail-context-compressor/`, with `SKILL.md`, `scripts/ail_mcp.py`, `mcp.example.json`, this README, SECURITY.md and LICENSE.
 
 1. Download both files into the same folder and check the zip before you unpack it:
 
    ```bash
-   sha256sum -c ail-context-compressor-v1.0.0.zip.sha256          # Linux
-   shasum -a 256 -c ail-context-compressor-v1.0.0.zip.sha256      # macOS
+   sha256sum -c ail-context-compressor-v1.0.1.zip.sha256          # Linux
+   shasum -a 256 -c ail-context-compressor-v1.0.1.zip.sha256      # macOS
    ```
 
-   It should print `ail-context-compressor-v1.0.0.zip: OK`. If it does not, delete the zip and download it again.
+   It should print `ail-context-compressor-v1.0.1.zip: OK`. If it does not, delete the zip and download it again.
 
-2. Unzip it into your project's agent folder. For Claude Code that is `.claude/`, which puts the skill at `.claude/skills/ail-context-compressor/`:
+2. Unzip it into your project's skills folder. For Claude Code that is `.claude/skills/`, which puts the skill at `.claude/skills/ail-context-compressor/`:
 
    ```bash
    cd /path/to/your-project
-   mkdir -p .claude
-   unzip /path/to/ail-context-compressor-v1.0.0.zip -d .claude
+   mkdir -p .claude/skills
+   unzip /path/to/ail-context-compressor-v1.0.1.zip -d .claude/skills
    ```
 
-   Use `~/.claude` instead to make the skill available in every project. Other agents that read `SKILL.md` files have their own skills folder; unzip into its parent.
+   Use `~/.claude/skills` instead to make the skill available in every project. Other agents that read `SKILL.md` files have their own skills folder; unzip into it.
 
 3. To use the MCP server as well, copy the block from `mcp.example.json` into your client's MCP config (for example `.mcp.json` in the project for Claude Code, or `.cursor/mcp.json` for Cursor) and set the path to where `ail_mcp.py` now lives. See [MCP server](#mcp-server) below.
 

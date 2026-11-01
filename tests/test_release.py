@@ -13,13 +13,16 @@ import ail_mcp
 from tests import ROOT
 
 SKILL = "skills/ail-context-compressor"
+TOP = "ail-context-compressor"
+# One top-level folder with SKILL.md directly inside it, as marketplaces such
+# as Agensi require (not at the zip root, not nested a second level down).
 ALLOWED = [
-    f"{SKILL}/LICENSE",
-    f"{SKILL}/README.md",
-    f"{SKILL}/SECURITY.md",
-    f"{SKILL}/SKILL.md",
-    f"{SKILL}/mcp.example.json",
-    f"{SKILL}/scripts/ail_mcp.py",
+    f"{TOP}/LICENSE",
+    f"{TOP}/README.md",
+    f"{TOP}/SECURITY.md",
+    f"{TOP}/SKILL.md",
+    f"{TOP}/mcp.example.json",
+    f"{TOP}/scripts/ail_mcp.py",
 ]
 # Names that must never ship. Stored as rot13 so this file does not trip a plain
 # text scan of the repository for the same words.
@@ -50,9 +53,15 @@ class ReleaseZipTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
-    def test_version_is_1_0_0_and_named_in_zip(self):
-        self.assertEqual(self.builder.version(), "1.0.0")
-        self.assertEqual(self.zip_path.name, "ail-context-compressor-v1.0.0.zip")
+    def test_version_is_1_0_1_and_named_in_zip(self):
+        self.assertEqual(self.builder.version(), "1.0.1")
+        self.assertEqual(self.zip_path.name, "ail-context-compressor-v1.0.1.zip")
+
+    def test_single_top_folder_with_skill_md_at_its_root(self):
+        with zipfile.ZipFile(self.zip_path) as zf:
+            names = zf.namelist()
+        self.assertEqual({n.split("/", 1)[0] for n in names}, {TOP})
+        self.assertIn(f"{TOP}/SKILL.md", names)
 
     def test_build_is_deterministic(self):
         again, digest = self.builder.build(Path(self.tmp.name) / "b")
@@ -78,7 +87,7 @@ class ReleaseZipTests(unittest.TestCase):
         except (OSError, subprocess.CalledProcessError):
             self.skipTest("git not available")
         tracked = sorted(out.stdout.split())
-        shipped = sorted(n for n in ALLOWED if (ROOT / n).exists())
+        shipped = sorted(self.builder.FILES[n] for n in ALLOWED if self.builder.FILES[n].startswith(SKILL + "/"))
         self.assertEqual(tracked, shipped)
 
     def test_no_secrets_or_banned_words(self):
