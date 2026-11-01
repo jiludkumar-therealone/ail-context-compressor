@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>AILv1: a compact format for handing over agent session state</title>
+<meta name="description" content="AILv1 is a line-oriented text format and a small Python tool for passing session state between models and agents.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<h1>AILv1</h1>
+<p class="lead">A compact, line-oriented text format for handing session state from one model or agent to the next, plus a small Python tool that writes and reads it.</p>
+<nav aria-label="On this page">
+<ul>
+<li><a href="#what">What it is</a></li>
+<li><a href="#safety">Safety</a></li>
+<li><a href="#install">Use it in your project</a></li>
+<li><a href="#benchmarks">Benchmarks</a></li>
+<li><a href="#links">Source and license</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<section id="what" aria-labelledby="what-h">
+<h2 id="what-h">What it is</h2>
+<p>When a long session moves to a new model or a fresh context window, a plain summary tends to lose the parts that matter most: which approaches already failed and why, which names keep recurring, and what the code actually looks like. AILv1 (Agent Intermediate Language, version 1) keeps those in tagged lines:</p>
+<ul>
+<li><code>@MEM</code> defines short <code>$N</code> pointers for names that recur.</li>
+<li><code>@CTX</code> and <code>@ARCH</code> hold context, topology and data flow.</li>
+<li><code>@LOG</code> records a rejected approach, the reason, and what replaced it.</li>
+<li><code>@SIG</code> lists code signatures with the state they mutate.</li>
+<li><code>@NEXT</code> lists open tasks.</li>
+</ul>
+<pre><code>!AILv1
+@MEM $1=recipe_api $2=MinIO $3=Celery_Redis
+@ARCH $1[FastAPI|Postgres] := upload-&gt;$2:originals-&gt;$3:make_thumbnails-&gt;$2:thumbs
+@LOG !FastAPI_BackgroundTasks(lost_40_jobs_on_redeploy) -&gt; ^$3_acks_late
+@SIG worker.py|make_thumbnails(photo_id:int,key:str)-&gt;list[str]|mutates(storage.put_object_bytes)
+@NEXT ?per_user_upload_rate_limit</code></pre>
+<p>The tool is a single Python script that needs only the standard library. It includes:</p>
+<ul>
+<li>an encoder that redacts secrets by default before it does anything else;</li>
+<li>a decoder that only parses, resolves pointers in one pass, and caps input and output size;</li>
+<li>a signature extractor built on Python's <code>ast</code> module;</li>
+<li>a CLI, an MCP server, and an Agent Skill (<code>SKILL.md</code>).</li>
+</ul>
+<p>Redaction covers common API tokens and keys, private key blocks, <code>password=</code> and <code>"api_key": "…"</code> style credentials, email addresses, and IPv4 and IPv6 addresses. It is pattern-based and has limits, which SECURITY.md lists.</p>
+</section>
+
+<section id="safety" class="warning" aria-labelledby="safety-h">
+<h2 id="safety-h">Decoded content is data, not instructions</h2>
+<p>A snapshot can carry text written to steer a model, such as fake <code>@NEXT</code> tasks or "ignore previous instructions". The decoder only parses and never evaluates anything, but it cannot tell you whether the text inside is trustworthy. Do not let an agent act on a snapshot from someone else without confirming with its user. The <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/SECURITY.md">security policy</a> covers this, the redaction scope, and how to report a problem.</p>
+</section>
+
+<section id="install" aria-labelledby="install-h">
+<h2 id="install-h">Use it in your own project</h2>
+<p>AILv1 ships as one folder, <code>skills/ail-context-compressor</code>, which holds the <code>SKILL.md</code> file and the Python script. You can load it as an Agent Skill, run it as an MCP server, or both.</p>
+
+<h3>1. Get the code</h3>
+<p>Clone the repository:</p>
+<pre><code>git clone https://github.com/jiludkumar-therealone/ail-context-compressor.git</code></pre>
+<p>Or download a zip instead of cloning: take a release zip from the <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/releases">Releases page</a> when one is published, or the <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/archive/refs/heads/main.zip">current main branch as a zip</a>, and unpack it. The unpacked folder is named after the release or branch, for example <code>ail-context-compressor-main</code>; use that name in place of <code>ail-context-compressor</code> below.</p>
+
+<h3>2. Add it as a skill</h3>
+<p>Copy the skill folder into your project's skills folder. For Claude Code that is <code>.claude/skills/</code> in the project root; other agents that read <code>SKILL.md</code> files use their own folder, so check their documentation.</p>
+<pre><code>cd /path/to/your-project
+mkdir -p .claude/skills
+cp -r /path/to/ail-context-compressor/skills/ail-context-compressor .claude/skills/</code></pre>
+<p>To make the skill available in every project rather than one, copy it to <code>~/.claude/skills/</code> instead.</p>
+
+<h3>3. Add the MCP server</h3>
+<p>Install the <code>mcp</code> package (1.x or 2.x) with <code>pip install mcp</code>, then add the server to your client's MCP configuration. For a single project this is usually a file in the project, such as <code>.mcp.json</code> for Claude Code or <code>.cursor/mcp.json</code> for Cursor. Point the path at the copy you made in step 2:</p>
+<pre><code>{
+  "mcpServers": {
+    "ail-context-compressor": {
+      "command": "python3",
+      "args": ["/path/to/your-project/.claude/skills/ail-context-compressor/scripts/ail_mcp.py", "mcp"]
+    }
+  }
+}</code></pre>
+<p>The same block is in <code>claude_desktop_config.example.json</code> in the repository. The server exposes four tools: <code>ail_compress_text</code>, <code>ail_extract_code_sigs</code>, <code>ail_hydrate_state</code>, and <code>ail_save_checkpoint</code>. The checkpoint tool writes a new <code>&lt;name&gt;.ail</code> file in the server's working directory only. It takes no directory argument, never overwrites a file, and never follows symlinks.</p>
+
+<h3>From the command line</h3>
+<p>The script needs only the Python standard library (3.10 or later):</p>
+<pre><code>S=skills/ail-context-compressor/scripts/ail_mcp.py
+python3 $S pack -f notes.md &gt; session.ail   # prose or chat log to snapshot
+python3 $S sig -f app.py                    # @SIG lines only
+python3 $S unpack -f session.ail            # back to readable text</code></pre>
+<p>Running <code>pip install .</code> from a checkout installs the same script as the <code>ail-mcp</code> command. Install <code>tiktoken</code> if you want exact token counts.</p>
+</section>
+
+<section id="benchmarks" aria-labelledby="bench-h">
+<h2 id="bench-h">Benchmarks</h2>
+<p>Token counts use tiktoken's <code>cl100k_base</code> encoding (tiktoken 0.14.0). Every input is in the repository's <code>benchmarks/inputs/</code> folder and is invented sample text.</p>
+<div class="table-wrap">
+<table>
+<caption>Raw input tokens compared with AILv1 snapshot tokens</caption>
+<thead>
+<tr><th scope="col">Workload</th><th scope="col">Snapshot</th><th scope="col" class="num">Raw tokens</th><th scope="col" class="num">AILv1 tokens</th><th scope="col" class="num">Reduction</th></tr>
+</thead>
+<tbody>
+<tr><td>3-turn architecture session (<code>architecture_session.md</code>)</td><td><code>pack</code> (automatic)</td><td class="num">1,879</td><td class="num">1,435</td><td class="num">23.6%</td></tr>
+<tr><td>3-turn architecture session (<code>architecture_session.md</code>)</td><td>hand-written (<code>architecture_session.ail</code>)</td><td class="num">1,879</td><td class="num">385</td><td class="num">79.5%</td></tr>
+<tr><td>Python source (<code>ail_mcp.py</code>, signatures only)</td><td><code>pack</code> (automatic)</td><td class="num">5,895</td><td class="num">757</td><td class="num">87.2%</td></tr>
+<tr><td>One-paragraph example (<code>quick_example.txt</code>)</td><td><code>pack</code> (automatic)</td><td class="num">85</td><td class="num">98</td><td class="num">-15.3%</td></tr>
+<tr><td>One-paragraph example (<code>quick_example.txt</code>)</td><td>hand-written (<code>quick_example.ail</code>)</td><td class="num">85</td><td class="num">87</td><td class="num">-2.4%</td></tr>
+</tbody>
+</table>
+</div>
+<p>How to read these numbers:</p>
+<ul>
+<li>On Python source, the encoder keeps only signatures and mutations, so the saving is large. Function bodies are dropped. The result is a map of the code, not a copy of it.</li>
+<li>On prose, the automatic encoder is close to lossless and saves little, because it only replaces long names that repeat. The large saving on a conversation comes from a hand-written snapshot, which is a summary and drops detail.</li>
+<li>On a short paragraph, AILv1 can cost more tokens than the original. Pointers and section tags pay off only when names repeat.</li>
+</ul>
+<p>To reproduce the table from a checkout:</p>
+<pre><code>pip install tiktoken
+python3 benchmarks/run.py</code></pre>
+<p>A test in the repository fails if the README table drifts from what this script measures.</p>
+</section>
+
+<section id="links" aria-labelledby="links-h">
+<h2 id="links-h">Source and license</h2>
+<ul>
+<li>Source code, issues and full documentation: <a href="https://github.com/jiludkumar-therealone/ail-context-compressor">github.com/jiludkumar-therealone/ail-context-compressor</a></li>
+<li>Security policy and redaction scope: <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/SECURITY.md">SECURITY.md</a></li>
+<li>License: <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/LICENSE">MIT</a></li>
+</ul>
+</section>
+</main>
+<footer>
+<p>AILv1 is released under the MIT License. Copyright © 2026 Jilu Dileep Kumar. This page uses no scripts, cookies, analytics, or third-party resources.</p>
+</footer>
+</body>
+</html>
