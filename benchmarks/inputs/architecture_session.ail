@@ -1,0 +1,14 @@
+!AILv1
+@MEM $1=recipe_api $2=MinIO $3=Celery_Redis $4=recipe_photos $5=make_thumbnails $6=upload.py $7=worker.py
+@ARCH $1[FastAPI|Docker|Postgres] := upload->$2:originals->$3:$5->$2:thumbs/{small,medium,large}.webp | $4[key,status]
+@CTX $5[acks_late,max_retries=3]->db.mark_photo_ready->redis_pubsub->SSE->browser
+@LOG !thumbnail_in_request_handler(30s_gateway_timeout_on_3+_photos) -> ^202_Accepted+$3_worker
+@LOG !postgres_bytea_storage($4_14GB_in_2_weeks) -> ^$2_object_storage+keys_in_postgres
+@LOG !FastAPI_BackgroundTasks(lost_40_jobs_on_redeploy) -> ^$3_acks_late
+@LOG !status_polling(db_cpu_x2_at_200_users) -> ^SSE_via_redis_pubsub
+@SIG $6|~upload_photos(recipe_id:int,files:list[UploadFile])->dict|mutates(storage.put_object,db.insert_photo,$5.delay)
+@SIG $7|$5(photo_id:int,key:str)->list[str]|mutates(storage.put_object_bytes,db.mark_photo_ready)
+@SIG $6|~stream_photo_events(recipe_id:int)->StreamingResponse
+@SIG $7|publish_ready(recipe_id:int,photo_id:int,thumbnails:list[str])->None|mutates(redis_sync.publish)
+@CTX HEIC:pillow-heif_in_worker+ALLOWED_TYPES+=image/heic,image/heif | jpeg:image.draft(RGB,1600)_before_load
+@NEXT ?per_user_upload_rate_limit ?cleanup_job(orphan_originals_of_deleted_recipes)
