@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import ast
 import functools
+import os
 import re
 import sys
 from collections import Counter
@@ -404,13 +405,22 @@ def hydrate_state(ail_block: str) -> str:
     return hydrate(ail_block)
 
 
-def save_checkpoint(ail_block: str, filename: str = "session.ail", directory: str | None = None) -> str:
-    """Save a valid !AILv1 payload as <name>.ail in the current directory. Never overwrites."""
-    if not CHECKPOINT_NAME.fullmatch(filename) or filename.startswith("."):
+def save_checkpoint(ail_block: str, filename: str = "session.ail") -> str:
+    """Save a valid !AILv1 payload as <name>.ail in the server's working directory.
+
+    The caller cannot choose a directory. Never overwrites and never follows symlinks.
+    """
+    if not CHECKPOINT_NAME.fullmatch(filename) or filename.startswith(".") or ".." in filename:
         raise ValueError("filename must be a plain name ending in .ail, e.g. session.ail")
     parse(ail_block)
-    out = Path(directory or Path.cwd()).resolve() / filename
-    with out.open("x", encoding="utf-8") as fh:
+    base = Path.cwd().resolve()
+    out = base / filename
+    if out.parent != base:
+        raise ValueError(f"refusing to write {filename!r} outside the working directory")
+    if os.path.lexists(out):  # also catches symlinks, dangling or not
+        raise FileExistsError(f"refusing to overwrite {out}")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(out, flags, 0o644), "w", encoding="utf-8") as fh:
         fh.write(ail_block)
     return f"Saved {count_tokens(ail_block)} tokens to {out}"
 

@@ -11,7 +11,7 @@ An `!AILv1` payload is untrusted input, wherever it came from.
 - The decoder (`parse`, `hydrate`, the `unpack` CLI mode and the `ail_hydrate_state` MCP tool) only parses text with regular expressions and string operations. It never calls `eval`, `exec`, `pickle`, `marshal` or a YAML loader, and a test fails if the module starts to.
 - Parsing rejects payloads without the `!AILv1` header, unknown sections, malformed `@MEM`, `@LOG` or `@SIG` lines, payloads over 1,000,000 characters, and hydrated output over 10,000,000 characters. Pointers expand in a single pass, so a pointer value cannot expand further.
 - Decoded content is data, not instructions. A payload can contain text written to manipulate a model ("ignore previous instructions", fake `@NEXT` tasks). Agents should not act on a payload from a third party without confirming with their user.
-- `ail_save_checkpoint` writes only a plain `<name>.ail` file in the server's working directory, only after the payload parses, and never overwrites an existing file.
+- `ail_save_checkpoint` takes no directory argument. It writes only a plain `<name>.ail` file (no separators, no leading dot, no `..`) in the server's working directory, only after the payload parses. It checks the resolved path stays in that directory, refuses existing files and symlinks, and opens with `O_EXCL | O_NOFOLLOW`. A prompt-injected model can at most create a new `.ail` file in that one directory.
 
 ## Redaction scope
 

@@ -102,7 +102,7 @@ Or install the package from a checkout: `pip install .` gives you the `ail-mcp` 
 
 ### MCP server
 
-Tools: `ail_compress_text`, `ail_extract_code_sigs`, `ail_hydrate_state`, `ail_save_checkpoint` (writes `<name>.ail` in the working directory only, never overwrites). Works with `mcp` 1.x (`FastMCP`) and 2.x (`MCPServer`).
+Tools: `ail_compress_text`, `ail_extract_code_sigs`, `ail_hydrate_state`, `ail_save_checkpoint` (writes a new `<name>.ail` in the server's working directory only; no directory argument, never overwrites, never follows symlinks). Works with `mcp` 1.x (`FastMCP`) and 2.x (`MCPServer`).
 
 ```json
 {
