@@ -27,7 +27,9 @@ An `!AILv1` payload is untrusted input, wherever it came from.
 | `GOOGLE_KEY` | `AIza...` API keys |
 | `JWT` | three-part `eyJ...` tokens |
 | `BEARER_TOKEN` | `Bearer <token>` |
+| `SECRET` | values of credential-named keys: `password`, `passwd`, `secret`, `api_key`/`apikey`/`api-key`, `access_token`, `auth_token`, `refresh_token`, `private_key` (any prefix such as `DB_PASSWORD` or `client_secret`), in `key=value`, `key: value`, `"key": "value"` and `key: str = "value"` forms. The key is kept; only the value is replaced. Bare values that look like code (calls, attributes, indexing, `None`, type names, `$VAR` references) are left alone. |
 | `EMAIL` | email addresses |
 | `IPV4` | every IPv4 address, including private (`10.x`, `172.16/12`, `192.168.x`) and CGNAT (`100.64.0.0/10`) ranges |
+| `IPV6` | IPv6 addresses confirmed by Python's `ipaddress` module, including bracketed, zone-indexed (`%eth0`) and IPv4-mapped forms. Slice-like or loopback forms such as `::2`, `10::20` and `::1` are not redacted. |
 
-Not covered: IPv6 addresses, hostnames, passwords in free text, and secret formats not listed above. Redaction is pattern based and best effort; review a snapshot before you share it. The decoder does not redact.
+Not covered: hostnames, MAC addresses, passwords in free text without a credential-named key ("my password is ..."), comparisons such as `password == "..."`, IPv6 addresses written with only two numeric groups (`10::20`), and secret formats not listed above. Redaction is pattern based and best effort; review a snapshot before you share it. The decoder does not redact.

@@ -5,7 +5,7 @@ Stdlib only. Optional extras: `tiktoken` for exact cl100k_base token counts
 (falls back to a 4-chars-per-token estimate) and `mcp` for the server mode.
 
 Security model:
-- The encoder redacts secrets, emails and IPv4 addresses by default.
+- The encoder redacts secrets, key=value credentials, emails and IP addresses by default.
 - The decoder only parses text. It never evaluates, imports or deserializes
   anything, and every payload is treated as untrusted data.
 """
@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import ast
 import functools
+import ipaddress
 import os
 import re
 import sys
@@ -60,18 +61,73 @@ REDACTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("JWT", re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}")),
     ("BEARER_TOKEN", re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{16,}")),
     ("EMAIL", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
-    ("IPV4", re.compile(r"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}"
-                        r"(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\d.]*\d)")),
 ]
+IPV4 = re.compile(r"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}"
+                  r"(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\d.]*\d)")
+# Candidates only; _ipv6() confirms with the ipaddress module.
+IPV6_CANDIDATE = re.compile(r"(?<![\w:.])[0-9A-Fa-f:.]*:[0-9A-Fa-f:.]*:[0-9A-Fa-f:.]*(?:%[A-Za-z0-9]+)?(?![\w:])")
+# key=value / key: value / "key": "value" where the key names a credential.
+SECRET_KV = re.compile(
+    r"""(?ix)
+    (?P<key>(?<![\w.-])["']?[\w.-]*?
+        (?:password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|refresh[_-]?token|private[_-]?key)
+        ["']?)
+    (?P<sep>\s*:\s*[A-Za-z_][\w.\[\]|, ]*?\s*=\s*  # typed default: password: str = "x"
+        |\s*[:=]\s*)
+    (?:(?P<q>["'])(?P<qval>[^"'\n]+)(?P=q)  # quoted value: always a secret
+      |(?P<val>[^\s"',;&}()\[\]=<>]+)(?![(\[.\w]))  # bare value, but not a call, index or attribute
+    """)
+NOT_SECRET = {"none", "null", "true", "false", "str", "bytes", "int", "bool", "any", "optional", "secretstr"}
+
+
+def _ipv6(m: re.Match[str]) -> str | None:
+    cand = m.group(0)
+    trail = cand[len(cand.rstrip(".")):]
+    addr = cand.rstrip(".").split("%")[0]
+    try:
+        ipaddress.IPv6Address(addr)
+    except ValueError:
+        return None
+    groups = [g for g in addr.split(":") if g]
+    # Skip slice-like or loopback forms such as ::2, 10::20 or ::1.
+    if len(groups) < 2 or (len(groups) < 3 and not re.search(r"[A-Fa-f.]", addr)):
+        return None
+    return "[REDACTED_IPV6]" + trail
+
+
+def _secret_kv(m: re.Match[str]) -> str | None:
+    value = m.group("qval") or m.group("val")
+    if m.group("val") and (value.lower() in NOT_SECRET or value.startswith(("$", "%", "{"))):
+        return None
+    q = m.group("q") or ""
+    return f"{m.group('key')}{m.group('sep')}{q}[REDACTED_SECRET]{q}"
 
 
 def redact(text: str) -> tuple[str, dict[str, int]]:
-    """Replace secrets, emails and IPv4 addresses with [REDACTED_<KIND>]."""
+    """Replace secrets, credentials, emails and IP addresses with [REDACTED_<KIND>]."""
     counts: dict[str, int] = {}
-    for kind, pattern in REDACTION_PATTERNS:
-        text, n = pattern.subn(f"[REDACTED_{kind}]", text)
+
+    def apply(kind: str, pattern: re.Pattern[str], repl) -> None:
+        nonlocal text
+        n = 0
+
+        def sub(m: re.Match[str]) -> str:
+            nonlocal n
+            out = repl(m)
+            if out is None:
+                return m.group(0)
+            n += 1
+            return out
+
+        text = pattern.sub(sub, text)
         if n:
             counts[kind] = n
+
+    for kind, pattern in REDACTION_PATTERNS:
+        apply(kind, pattern, lambda m, k=kind: f"[REDACTED_{k}]")
+    apply("SECRET", SECRET_KV, _secret_kv)
+    apply("IPV6", IPV6_CANDIDATE, _ipv6)
+    apply("IPV4", IPV4, lambda m: "[REDACTED_IPV4]")
     return text, counts
 
 

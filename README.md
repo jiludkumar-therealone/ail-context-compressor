@@ -50,7 +50,7 @@ identifier   = ( LETTER | DIGIT | "_" | "." | "/" | ":" | "-" )+ ;
 - **Encoder (`pack`)**: redacts secrets first (on by default), turns a Python file into `@SIG` lines, turns fenced Python blocks in a chat log into `@SIG` lines plus a `[CodeBlock_N]` marker, keeps every other non-blank line as `@CTX`, and replaces recurring terms with `$N` pointers when that saves tokens. `@LOG` and `@NEXT` entries are passed in explicitly (`--log`, `--next`); the encoder does not guess which approaches were rejected.
 - **Decoder (`parse`, `hydrate`)**: validates the header and every section, resolves pointers in a single pass, leaves undefined `$N` untouched, and caps input and output size. Prose round-trips exactly (minus blank lines and surrounding whitespace).
 - **`@SIG` extractor**: Python `ast` only. Qualified names (`Class.method`, `outer.inner`), typed args, short defaults, `*args`/`**kwargs`, async (`~`), return type (annotated, or `Any`/`None` inferred), and up to five mutations (attribute/subscript assignment, `global`/`nonlocal`, calls such as `.append`, `.write_text`, `.commit`).
-- **Redaction**: GitHub tokens, `sk-` API keys, AWS key IDs, Slack and Google keys, JWTs, bearer tokens, private key blocks, emails, and all IPv4 addresses (including `10.0.0.0/8` and `100.64.0.0/10`). Full scope and limits in [SECURITY.md](SECURITY.md).
+- **Redaction**: GitHub tokens, `sk-` API keys, AWS key IDs, Slack and Google keys, JWTs, bearer tokens, private key blocks, `password=`/`secret:`/`"api_key": "..."` style credentials, emails, IPv6, and all IPv4 addresses (including `10.0.0.0/8` and `100.64.0.0/10`). Full scope and limits in [SECURITY.md](SECURITY.md).
 
 ## Benchmarks (`cl100k_base`)
 

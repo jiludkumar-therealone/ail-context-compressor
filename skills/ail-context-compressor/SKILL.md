@@ -8,7 +8,7 @@ Turn long conversations, Python source and architecture notes into compact AILv1
 
 ## Bundled resources
 
-- `scripts/ail_mcp.py`: standalone CLI and MCP server. Redacts secrets, emails and IPv4 addresses by default, builds `@MEM` pointers, extracts Python `@SIG` lines with `ast`, counts tokens with `tiktoken` when installed. Standard library only; `mcp` is needed only for server mode.
+- `scripts/ail_mcp.py`: standalone CLI and MCP server. Redacts secrets, credential key=value pairs, emails and IPv4/IPv6 addresses by default, builds `@MEM` pointers, extracts Python `@SIG` lines with `ast`, counts tokens with `tiktoken` when installed. Standard library only; `mcp` is needed only for server mode.
 
 ## Format
 
