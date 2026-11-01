@@ -124,6 +124,8 @@ python3 verify_ail.py           # standard library only; MCP tests skip without 
 pip install ".[test]" && python3 -m pytest
 ```
 
+CI (`.github/workflows/tests.yml`) runs both on every pull request (Python 3.10 and 3.13), plus the benchmark script.
+
 ## License
 
 MIT
