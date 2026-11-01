@@ -61,18 +61,18 @@
 <p>AILv1 ships as one folder, <code>skills/ail-context-compressor</code>, which holds the <code>SKILL.md</code> file and the Python script. You can load it as an Agent Skill, run it as an MCP server, or both.</p>
 
 <h3>1. Download the release</h3>
-<p>From the <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/releases/latest">latest release</a>, download both files into the same folder: <code>ail-context-compressor-v1.0.0.zip</code> and <code>ail-context-compressor-v1.0.0.zip.sha256</code>. The zip holds one folder, <code>skills/ail-context-compressor/</code>, with <code>SKILL.md</code>, <code>scripts/ail_mcp.py</code>, <code>mcp.example.json</code>, the README, SECURITY.md and LICENSE.</p>
+<p>From the <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/releases/latest">latest release</a>, download both files into the same folder: <code>ail-context-compressor-v1.0.1.zip</code> and <code>ail-context-compressor-v1.0.1.zip.sha256</code>. The zip holds one folder, <code>ail-context-compressor/</code>, with <code>SKILL.md</code>, <code>scripts/ail_mcp.py</code>, <code>mcp.example.json</code>, the README, SECURITY.md and LICENSE.</p>
 <p>Check the zip before you unpack it:</p>
-<pre><code>sha256sum -c ail-context-compressor-v1.0.0.zip.sha256       # Linux
-shasum -a 256 -c ail-context-compressor-v1.0.0.zip.sha256   # macOS</code></pre>
-<p>It should print <code>ail-context-compressor-v1.0.0.zip: OK</code>. If it does not, delete the zip and download it again.</p>
+<pre><code>sha256sum -c ail-context-compressor-v1.0.1.zip.sha256       # Linux
+shasum -a 256 -c ail-context-compressor-v1.0.1.zip.sha256   # macOS</code></pre>
+<p>It should print <code>ail-context-compressor-v1.0.1.zip: OK</code>. If it does not, delete the zip and download it again.</p>
 
 <h3>2. Unzip it into your project</h3>
-<p>Unzip into your project's agent folder. For Claude Code that is <code>.claude/</code>, which puts the skill at <code>.claude/skills/ail-context-compressor/</code>:</p>
+<p>Unzip into your project's skills folder. For Claude Code that is <code>.claude/skills/</code>, which puts the skill at <code>.claude/skills/ail-context-compressor/</code>:</p>
 <pre><code>cd /path/to/your-project
-mkdir -p .claude
-unzip /path/to/ail-context-compressor-v1.0.0.zip -d .claude</code></pre>
-<p>To make the skill available in every project rather than one, unzip into <code>~/.claude</code> instead. Other agents that read <code>SKILL.md</code> files have their own skills folder; unzip into its parent.</p>
+mkdir -p .claude/skills
+unzip /path/to/ail-context-compressor-v1.0.1.zip -d .claude/skills</code></pre>
+<p>To make the skill available in every project rather than one, unzip into <code>~/.claude/skills</code> instead. Other agents that read <code>SKILL.md</code> files have their own skills folder; unzip into it.</p>
 <p>If you prefer to work from source, clone the repository and copy the folder yourself:</p>
 <pre><code>git clone https://github.com/jiludkumar-therealone/ail-context-compressor.git
 mkdir -p .claude/skills
