@@ -5,6 +5,7 @@ All notable changes to this project are listed here. Versions follow semantic ve
 ## Unreleased
 
 - Docs: prompt-only encoder section in README.
+- Docs: "Why AIL exists" page (origin and design rationale).
 
 ## v1.0.1 (2026-11-01)
 

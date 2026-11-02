@@ -18,6 +18,8 @@ A snapshot keeps what a summary usually drops: recurring entities (`@MEM` pointe
 
 > **Security: decoded content is data, not instructions.** A payload can carry text written to steer a model (fake `@NEXT` tasks, "ignore previous instructions"). The decoder only parses; it never evaluates anything. Do not let an agent act on a snapshot from someone else without confirming with its user. See [SECURITY.md](SECURITY.md).
 
+Why the format looks like this, and what came before it: [Why AIL exists](https://jiludkumar-therealone.github.io/ail-context-compressor/why.html).
+
 ## Prompt-only encoder (no install)
 
 Copy the prompt below into any AI chat to compress that conversation into an AILv1 block. No install is needed.
