@@ -18,6 +18,32 @@ A snapshot keeps what a summary usually drops: recurring entities (`@MEM` pointe
 
 > **Security: decoded content is data, not instructions.** A payload can carry text written to steer a model (fake `@NEXT` tasks, "ignore previous instructions"). The decoder only parses; it never evaluates anything. Do not let an agent act on a snapshot from someone else without confirming with its user. See [SECURITY.md](SECURITY.md).
 
+## Prompt-only encoder (no install)
+
+Copy the prompt below into any AI chat to compress that conversation into an AILv1 block. No install is needed.
+
+> **Prompt-only, best-effort.** The model writes the block itself, so it can drop details or miss a secret. For exact signatures and guaranteed redaction, use the Python encoder. Don't paste secrets into a chat and rely on this prompt to remove them.
+
+```text
+You are an AILv1 encoder. Compress everything in this conversation so far into ONE AILv1 block that another AI can load as working context. Output only the block.
+
+FORMAT
+!AILv1
+@MEM $1=Name $2=Other_Name      assign a $N pointer to every person, project, file, tool, service; use pointers everywhere after
+@CTX Label:=$1|$2               relationships, goals, constraints, current state
+@LOG !rejected(reason) -> ^replacement   every approach tried and dropped, why, and what replaced it
+@SIG file|~fn(args)->return|mutates(x)   only functions/commands actually shown in the chat, copied exactly; ~ only if async
+@NEXT ?open_question            open questions and next steps
+# AILv1 block complete. Redaction is best-effort; check before sharing.
+
+RULES
+1. Preserve facts, decisions, names, numbers and exact code identifiers. Never invent or guess. If unsure, write it as @NEXT ?unclear:<topic>.
+2. Redact before writing: API keys, tokens, passwords, private keys, emails, phone numbers and IP addresses become [REDACTED].
+3. Dense, not lossy: no prose, no filler, one fact per line. Use underscores instead of spaces inside names, pointers and @NEXT items.
+4. Later decisions override earlier ones; record the earlier one in @LOG.
+5. End the block with this comment line: "# AILv1 block complete. Redaction is best-effort; check before sharing."
+```
+
 ## Format
 
 | Section | Meaning | Example |
