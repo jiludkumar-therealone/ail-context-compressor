@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here. Versions follow semantic versioning.
 
-## v1.0.1 (unreleased)
+## v1.0.1 (2026-11-01)
 
 Packaging fix only. The skill files are unchanged.
 
