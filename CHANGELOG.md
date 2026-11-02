@@ -2,6 +2,10 @@
 
 All notable changes to this project are listed here. Versions follow semantic versioning.
 
+## Unreleased
+
+- Docs: prompt-only encoder section in README.
+
 ## v1.0.1 (2026-11-01)
 
 Packaging fix only. The skill files are unchanged.
