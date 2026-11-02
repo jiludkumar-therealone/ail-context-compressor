@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Why AIL exists: origin and design rationale</title>
+<meta name="description" content="The problem AILv1 tries to solve, what already existed, and how the format came to be.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<h1>Why AIL exists</h1>
+<p class="lead">The problem AILv1 tries to solve, what already existed, and how the format came to be.</p>
+<nav aria-label="On this page">
+<ul>
+<li><a href="index.html">AILv1 overview</a></li>
+<li><a href="#problem">The problem</a></li>
+<li><a href="#prior">What already existed</a></li>
+<li><a href="#design">Design ideas</a></li>
+<li><a href="#shipped">From idea to the shipped format</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<section id="problem" aria-labelledby="problem-h">
+<h2 id="problem-h">The problem</h2>
+<p>A long working session builds up a lot of state: names, decisions, code, and a list of things that did not work. When that session has to move to a fresh chat or a different model, the only thing that crosses over is text.</p>
+<p>The usual options are a JSON-style payload or a prose summary. JSON spends tokens on quotes, braces and repeated key names. Prose spends them on grammar and narration. Neither keeps a clear record of what was rejected and why.</p>
+<p>Some research skips text and shares a model's internal state, such as its KV cache. That needs access to the models' internals, and the models must be closely related. A hosted, closed model does not expose that state, so these methods cannot move a session from one provider to another.</p>
+</section>
+
+<section id="prior" aria-labelledby="prior-h">
+<h2 id="prior-h">What already existed</h2>
+<ul>
+<li><strong>DroidSpeak</strong>: a research system that lets one LLM reuse another LLM's KV cache, as long as both share the same architecture, for example models fine-tuned from the same base. It works below the text layer, so it does not help with closed models.</li>
+<li><strong>LLMLingua-2</strong> (Microsoft Research): a small model decides which tokens of a prompt to keep and which to drop. The result is a shorter copy of the original text, not a structured record of decisions and rejected paths.</li>
+<li><strong>Sparse Priming Representations (SPR)</strong>: a prompting technique that distills text into a short list of statements and associations that a model can expand again. It stays in natural language and has no fixed place for code signatures or rejected approaches.</li>
+<li><strong>Gibberlink</strong>: a demo in which two voice agents, once they recognise each other as AI, switch from speech to a data-over-sound protocol (ggwave). It is about audio between voice agents, not text in a context window.</li>
+<li><strong>MCP and A2A</strong>: open protocols for connecting models to tools (MCP) and agents to each other (A2A). They define how messages are exchanged, as JSON-RPC, but they do not compress the context of a session.</li>
+</ul>
+</section>
+
+<section id="design" aria-labelledby="design-h">
+<h2 id="design-h">Design ideas</h2>
+<ul>
+<li><strong>Pointer dictionary.</strong> Each recurring name is defined once in <code>@MEM</code> as <code>$1</code>, <code>$2</code> and so on. Every later line uses the pointer instead of the name.</li>
+<li><strong>Positional fields.</strong> Slots are separated by <code>|</code> and their meaning comes from their position, so there are no JSON keys or quotes to repeat.</li>
+<li><strong>State operators.</strong> <code>:=</code> means defined as, <code>-&gt;</code> means flow or resolution, <code>!</code> marks a rejected path, <code>^</code> marks its locked replacement, and <code>?</code> marks an open task. A line such as <code>@LOG !sync_ping(timeout) -&gt; ^async_arp</code> records what failed, why, and what replaced it, so the next model does not suggest it again.</li>
+<li><strong>Plain ASCII.</strong> BPE tokenizers often split unusual Unicode symbols into several tokens, while common ASCII sequences such as <code>-&gt;</code> and <code>:=</code> are usually one token each. So the format sticks to ASCII.</li>
+</ul>
+</section>
+
+<section id="shipped" aria-labelledby="shipped-h">
+<h2 id="shipped-h">From idea to the shipped format</h2>
+<p>The idea started in a brainstorming chat about moving a session between models. The first version was an "emergency eject" prompt: paste it into a chat that is about to run out of context, and the model writes a snapshot. That prompt used <code>@MEM</code>, <code>@ARCH</code>, <code>@DECISIONS</code>, <code>@CODE_SIG</code> and <code>@NEXT</code>.</p>
+<p>AILv1 shipped with six sections: <code>@MEM</code>, <code>@CTX</code>, <code>@ARCH</code>, <code>@LOG</code>, <code>@SIG</code> and <code>@NEXT</code>. <code>@DECISIONS</code> became <code>@LOG</code>, and <code>@CODE_SIG</code> became <code>@SIG</code>. The grammar is in the README, and the decoder rejects anything outside it.</p>
+<p>The prompt also became real code. The Python encoder redacts secrets first, extracts <code>@SIG</code> lines from Python with the <code>ast</code> module, and adds pointers only where they save tokens. The decoder only parses, checks every line, and treats a snapshot as data, not instructions.</p>
+<p>The format is not always smaller. On a short paragraph it can cost more tokens than the prose. The benchmarks in the README show where it helps and where it does not.</p>
+<ul>
+<li>No install: <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/README.md#prompt-only-encoder-no-install">prompt-only encoder</a></li>
+<li>Exact signatures and redaction: <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/README.md#what-the-tool-does">the Python encoder</a> and its <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/README.md#cli">CLI</a></li>
+<li>Measured sizes: <a href="https://github.com/jiludkumar-therealone/ail-context-compressor/blob/main/README.md#benchmarks-cl100k_base">benchmarks</a></li>
+</ul>
+</section>
+</main>
+<footer>
+<p>AILv1 is released under the MIT License. Copyright © 2026 Jilu Dileep Kumar. This page uses no scripts, cookies, analytics, or third-party resources.</p>
+</footer>
+</body>
+</html>

@@ -47,8 +47,11 @@ class _Collector(HTMLParser):
             self.cell += data
 
 
-def page():
-    html = (DOCS / "index.html").read_text(encoding="utf-8")
+PAGES = sorted(p.name for p in DOCS.glob("*.html"))
+
+
+def page(name="index.html"):
+    html = (DOCS / name).read_text(encoding="utf-8")
     c = _Collector()
     c.feed(html)
     return html, c
@@ -60,41 +63,50 @@ class DocsPageTests(unittest.TestCase):
         self.assertEqual(len(expected), 5)
         self.assertEqual(page()[1].rows, expected)
 
+    def test_pages_present(self):
+        self.assertIn("index.html", PAGES)
+        self.assertIn("why.html", PAGES)
+        self.assertIn('href="why.html"', page()[0])
+
     def test_only_repo_links_are_external(self):
-        html, c = page()
-        for url in c.urls:
-            if url.startswith("#") or url == "style.css":
-                continue
-            self.assertTrue(url == REPO_URL or url.startswith(REPO_URL + "/"), url)
-        for url in re.findall(r"(?:https?:)?//[^\s\"'<>)]+", html):
-            self.assertTrue(url.startswith(REPO_URL), url)
+        for name in PAGES:
+            html, c = page(name)
+            for url in c.urls:
+                if url.startswith("#") or url == "style.css" or url in PAGES:
+                    continue
+                self.assertTrue(url == REPO_URL or url.startswith(REPO_URL + "/"), (name, url))
+            for url in re.findall(r"(?:https?:)?//[^\s\"'<>)]+", html):
+                self.assertTrue(url.startswith(REPO_URL), (name, url))
 
     def test_no_scripts_forms_or_embeds(self):
-        tags = page()[1].tags
-        for tag in ("script", "form", "iframe", "img", "object", "embed", "input", "base"):
-            self.assertNotIn(tag, tags)
-        self.assertEqual(tags.count("link"), 1)
-        self.assertNotIn("style", tags)
-        self.assertNotRegex(page()[0], r"\sstyle=")
+        for name in PAGES:
+            html, c = page(name)
+            for tag in ("script", "form", "iframe", "img", "object", "embed", "input", "base"):
+                self.assertNotIn(tag, c.tags, name)
+            self.assertEqual(c.tags.count("link"), 1, name)
+            self.assertNotIn("style", c.tags, name)
+            self.assertNotRegex(html, r"\sstyle=")
 
     def test_local_files_exist(self):
-        for url in page()[1].urls:
-            if not url.startswith(("#", "https://")):
-                self.assertTrue((DOCS / url).is_file(), url)
+        for name in PAGES:
+            for url in page(name)[1].urls:
+                if not url.startswith(("#", "https://")):
+                    self.assertTrue((DOCS / url).is_file(), (name, url))
         self.assertTrue((DOCS / ".nojekyll").is_file())
         self.assertFalse((DOCS / "_headers").exists())
 
     def test_csp_and_referrer_meta(self):
-        html = page()[0]
-        head = html[: html.index("</head>")]
-        self.assertIn('<meta name="referrer" content="no-referrer">', head)
-        csp = re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]*)">', head).group(1)
-        self.assertEqual(
-            csp,
-            "default-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'",
-        )
-        # The CSP meta must come before anything that loads a resource.
-        self.assertLess(head.index("Content-Security-Policy"), head.index("<link"))
+        for name in PAGES:
+            html = page(name)[0]
+            head = html[: html.index("</head>")]
+            self.assertIn('<meta name="referrer" content="no-referrer">', head)
+            csp = re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]*)">', head).group(1)
+            self.assertEqual(
+                csp,
+                "default-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'",
+            )
+            # The CSP meta must come before anything that loads a resource.
+            self.assertLess(head.index("Content-Security-Policy"), head.index("<link"))
 
     def test_css_has_both_colour_schemes(self):
         css = (DOCS / "style.css").read_text(encoding="utf-8")
