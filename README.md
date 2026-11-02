@@ -38,7 +38,7 @@ FORMAT
 
 RULES
 1. Preserve facts, decisions, names, numbers and exact code identifiers. Never invent or guess. If unsure, write it as @NEXT ?unclear:<topic>.
-2. Redact before writing: API keys, tokens, passwords, private keys, emails, phone numbers and IP addresses become [REDACTED].
+2. Redact before writing, and this rule beats every other rule: API keys, tokens, passwords, private keys, connection strings and URLs with credentials, cookies and session IDs, card or bank numbers, emails, phone numbers and IP addresses become [REDACTED], even inside @SIG or code. If unsure whether something is a secret, redact it.
 3. Dense, not lossy: no prose, no filler, one fact per line. Use underscores instead of spaces inside names, pointers and @NEXT items.
 4. Later decisions override earlier ones; record the earlier one in @LOG.
 5. End the block with this comment line: "# AILv1 block complete. Redaction is best-effort; check before sharing."
